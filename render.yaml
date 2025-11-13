@@ -5,6 +5,7 @@ services:
     region: oregon
     plan: free
     branch: main
+    rootDir: algamoney-api
     dockerfilePath: ./Dockerfile
     envVars:
       - key: SPRING_PROFILES_ACTIVE
