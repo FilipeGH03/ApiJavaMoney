@@ -1,0 +1,400 @@
+# 🔐 GUIA DE TESTES - API Algamoney com OAuth2 JWT
+
+## 📋 Credenciais
+- **Username:** admin
+- **Password:** admin
+
+---
+
+## 🚀 TESTE 1: Login (Obter Token JWT)
+
+### Postman / Insomnia:
+```
+Método: POST
+URL: http://localhost:8080/oauth/token
+Headers:
+  Content-Type: application/json
+
+Body (JSON):
+{
+  "username": "admin",
+  "password": "admin"
+}
+```
+
+### Resposta Esperada:
+```json
+{
+  "access_token": "eyJhbGciOiJSUzI1NiJ9.eyJpc3MiOiJhbGdhbW9uZXktYXBpIiwic3ViIjoiYWRtaW4iLCJleHAiOjE3MzE0MzQwMDAsImlhdCI6MTczMTQzMDQwMCwic2NvcGUiOiJST0xFX1JPTEUifQ...",
+  "refresh_token": "e8b3a4c1-5f7d-4a9b-8c2e-3d6f1a9b7c4e",
+  "token_type": "Bearer",
+  "expires_in": 3600
+}
+```
+
+**📝 IMPORTANTE:** 
+- Copie o `access_token` - você vai usar nas requisições normais!
+- Copie o `refresh_token` - você vai usar para renovar o access_token quando ele expirar!
+
+---
+
+## 🔓 TESTE 2: Endpoint Público (Sem Token)
+
+### GET Categorias (Não precisa de token)
+```
+Método: GET
+URL: http://localhost:8080/categorias
+Authorization: No Auth (ou deixe vazio)
+```
+
+### Resposta: Lista de categorias (200 OK)
+```json
+[
+  {
+    "codigo": 1,
+    "nome": "Alimentação"
+  },
+  {
+    "codigo": 2,
+    "nome": "Saúde"
+  }
+]
+```
+
+---
+
+## 🔒 TESTE 3: Endpoint Protegido COM Token
+
+### GET Pessoas (Requer token JWT)
+
+#### No Postman:
+```
+Método: GET
+URL: http://localhost:8080/pessoas
+
+Authorization:
+  Type: Bearer Token
+  Token: [Cole aqui o access_token que você copiou do Login]
+```
+
+#### Alternativa - Header Manual:
+```
+Método: GET
+URL: http://localhost:8080/pessoas
+Headers:
+  Authorization: Bearer eyJhbGciOiJSUzI1NiJ9... (seu token completo)
+```
+
+### Resposta: Lista de pessoas (200 OK)
+
+---
+
+## 🔒 TESTE 4: GET Lançamentos com Filtro
+
+### Requisição:
+```
+Método: GET
+URL: http://localhost:8080/lancamentos?descricao=aluguel
+
+Authorization:
+  Type: Bearer Token
+  Token: [Seu access_token]
+```
+
+### Resposta: Lançamentos filtrados por descrição
+
+---
+
+## 🔒 TESTE 5: POST Criar Lançamento
+
+### Requisição:
+```
+Método: POST
+URL: http://localhost:8080/lancamentos
+
+Headers:
+  Content-Type: application/json
+
+Authorization:
+  Type: Bearer Token
+  Token: [Seu access_token]
+
+Body (JSON):
+{
+  "descricao": "Aluguel de Dezembro",
+  "data_vencimento": "2024-12-05",
+  "valor": 1500.00,
+  "tipo": "DESPESA",
+  "categoria": {
+    "codigo": 3
+  },
+  "pessoa": {
+    "codigo": 1
+  }
+}
+```
+
+### Resposta: Lançamento criado (201 Created)
+
+---
+
+## ❌ TESTE 6: Requisição SEM Token (Deve Falhar)
+
+### Requisição:
+```
+Método: GET
+URL: http://localhost:8080/pessoas
+Authorization: No Auth
+```
+
+### Resposta Esperada: 401 Unauthorized
+```json
+{
+  "timestamp": "2025-11-12T14:30:00",
+  "status": 401,
+  "error": "Unauthorized",
+  "message": "Full authentication is required to access this resource",
+  "path": "/pessoas"
+}
+```
+
+---
+
+## 🔄 TESTE 7: Renovar Token com Refresh Token
+
+Quando o `access_token` expirar (após 1 hora), você pode usar o `refresh_token` para obter um novo sem precisar fazer login novamente!
+
+### Requisição:
+```
+Método: POST
+URL: http://localhost:8080/oauth/token/refresh
+
+Headers:
+  Content-Type: application/json
+
+Body (JSON):
+{
+  "refresh_token": "e8b3a4c1-5f7d-4a9b-8c2e-3d6f1a9b7c4e"
+}
+```
+
+### Resposta Esperada:
+```json
+{
+  "access_token": "eyJhbGciOiJSUzI1NiJ9... (novo token)",
+  "refresh_token": "e8b3a4c1-5f7d-4a9b-8c2e-3d6f1a9b7c4e",
+  "token_type": "Bearer",
+  "expires_in": 3600
+}
+```
+
+**📝 IMPORTANTE:**
+- O `refresh_token` é válido por **30 dias**
+- Use o novo `access_token` para suas próximas requisições
+- Você pode renovar quantas vezes quiser durante esses 30 dias
+- Se o `refresh_token` expirar, você precisará fazer login novamente
+
+---
+
+## ❌ TESTE 8: Token Expirado (Após 1 hora)
+
+Após 1 hora (3600 segundos), o access_token expira.
+
+### Resposta Esperada: 401 Unauthorized
+```json
+{
+  "error": "invalid_token",
+  "error_description": "Token has expired"
+}
+```
+
+**Solução:** Use o endpoint de refresh (TESTE 7) para obter um novo token, ou faça login novamente.
+
+---
+
+## 🌐 TESTE 9: Integração com Frontend (Angular/React)
+
+### JavaScript (Fetch):
+```javascript
+// 1. Login
+async function login() {
+  const response = await fetch('http://localhost:8080/oauth/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      username: 'admin',
+      password: 'admin'
+    })
+  });
+  
+  const data = await response.json();
+  localStorage.setItem('access_token', data.access_token);
+  localStorage.setItem('refresh_token', data.refresh_token);
+  console.log('Tokens salvos!');
+}
+
+// 2. Renovar Token
+async function refreshToken() {
+  const refreshToken = localStorage.getItem('refresh_token');
+  
+  const response = await fetch('http://localhost:8080/oauth/token/refresh', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      refresh_token: refreshToken
+    })
+  });
+  
+  const data = await response.json();
+  localStorage.setItem('access_token', data.access_token);
+  console.log('Token renovado!');
+}
+
+// 3. Buscar Lançamentos (com renovação automática)
+async function getLancamentos() {
+  let token = localStorage.getItem('access_token');
+  
+  let response = await fetch('http://localhost:8080/lancamentos', {
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  });
+  
+  const lancamentos = await response.json();
+  console.log('Lançamentos:', lancamentos);
+}
+
+// Executar
+login().then(() => getLancamentos());
+```
+
+### Angular (HttpClient):
+```typescript
+import { HttpClient, HttpHeaders } from '@angular/common/http';
+
+export class ApiService {
+  private apiUrl = 'http://localhost:8080';
+  
+  constructor(private http: HttpClient) {}
+
+  // Login
+  login(username: string, password: string) {
+    return this.http.post<any>(`${this.apiUrl}/oauth/token`, {
+      username,
+      password
+    }).pipe(
+      tap(response => {
+        localStorage.setItem('access_token', response.access_token);
+      })
+    );
+  }
+
+  // GET com token
+  getLancamentos() {
+    const token = localStorage.getItem('access_token');
+    const headers = new HttpHeaders({
+      'Authorization': `Bearer ${token}`
+    });
+    
+    return this.http.get(`${this.apiUrl}/lancamentos`, { headers });
+  }
+
+  // POST com token
+  criarLancamento(lancamento: any) {
+    const token = localStorage.getItem('access_token');
+    const headers = new HttpHeaders({
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    });
+    
+    return this.http.post(`${this.apiUrl}/lancamentos`, lancamento, { headers });
+  }
+}
+```
+
+---
+
+## 📊 RESUMO DOS ENDPOINTS
+
+| Endpoint | Método | Autenticação | Descrição |
+|----------|--------|--------------|-----------|
+| `/oauth/token` | POST | ❌ Não | Login - Retorna JWT token |
+| `/categorias` | GET | ❌ Não | Lista categorias (público) |
+| `/categorias` | POST | ✅ Sim | Criar categoria |
+| `/pessoas` | GET | ✅ Sim | Lista pessoas |
+| `/pessoas` | POST | ✅ Sim | Criar pessoa |
+| `/pessoas/{codigo}` | GET | ✅ Sim | Buscar pessoa por código |
+| `/pessoas/{codigo}` | PUT | ✅ Sim | Atualizar pessoa |
+| `/pessoas/{codigo}` | DELETE | ✅ Sim | Deletar pessoa |
+| `/pessoas/{codigo}/ativo` | PUT | ✅ Sim | Atualizar status ativo |
+| `/lancamentos` | GET | ✅ Sim | Lista lançamentos (com filtros) |
+| `/lancamentos` | POST | ✅ Sim | Criar lançamento |
+
+---
+
+## 🔧 CONFIGURAÇÕES CORS
+
+**Origens permitidas:**
+- http://localhost:4200 (Angular padrão)
+
+**Para adicionar outras origens, edite:**
+`ResourceServerConfig.java` → método `corsConfigurationSource()`
+
+```java
+configuration.setAllowedOrigins(Arrays.asList(
+    "http://localhost:4200",  // Angular
+    "http://localhost:3000",  // React
+    "http://localhost:8081"   // Vue.js
+));
+```
+
+---
+
+## ⚠️ TROUBLESHOOTING
+
+### Erro: "Full authentication is required"
+**Causa:** Token não foi enviado ou está inválido  
+**Solução:** Verifique se está usando `Authorization: Bearer <token>` no header
+
+### Erro: "Token has expired"
+**Causa:** Token expirou (1 hora de validade)  
+**Solução:** Faça login novamente para obter novo token
+
+### Erro: "Bad credentials"
+**Causa:** Username ou password incorretos  
+**Solução:** Use admin/admin
+
+### Erro: "CORS policy"
+**Causa:** Frontend rodando em origem não permitida  
+**Solução:** Adicione a origem em `corsConfigurationSource()`
+
+### Token não funciona
+**Causa:** Formato incorreto  
+**Solução:** Use `Bearer ` (com espaço) antes do token
+
+---
+
+## 📝 NOTAS IMPORTANTES
+
+1. ✅ Token JWT expira em **1 hora** (3600 segundos)
+2. ✅ Token é **stateless** - não precisa armazenar no servidor
+3. ✅ Senha está **criptografada** com BCrypt
+4. ✅ CORS configurado para **http://localhost:4200**
+5. ⚠️ Em produção, use HTTPS e tokens de refresh
+
+---
+
+## 🎯 PRÓXIMOS PASSOS
+
+Para implementar em produção:
+1. Adicionar **Refresh Token** (token de longa duração)
+2. Armazenar usuários em **banco de dados**
+3. Adicionar **roles/permissões** granulares
+4. Usar **HTTPS** obrigatoriamente
+5. Implementar **rate limiting**
+6. Adicionar logs de auditoria
+
+---
+
+Criado por: GitHub Copilot
+Data: 12/11/2025
