@@ -1,0 +1,2 @@
+ALTER TABLE pessoa
+    ADD COLUMN IF NOT EXISTS endereco_cep VARCHAR(10);
