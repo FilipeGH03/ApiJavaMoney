@@ -1,7 +1,7 @@
 package com.algaworks.algamoney.algamoney_api.resource;
 
-import java.util.List;
-
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.algaworks.algamoney.algamoney_api.event.RecursoCriadoEvent;
 import com.algaworks.algamoney.algamoney_api.model.Pessoa;
 import com.algaworks.algamoney.algamoney_api.repository.PessoaRepository;
+import com.algaworks.algamoney.algamoney_api.repository.filter.PessoaFilter;
 import com.algaworks.algamoney.algamoney_api.service.PessoaService;
 
 import jakarta.servlet.http.HttpServletResponse;
@@ -33,17 +34,22 @@ public class PessoaResource {
     @Autowired
     private PessoaRepository pessoaRepository;
 
-    @GetMapping()
-    @PreAuthorize("hasAuthority('ROLE_PESQUISAR_PESSOA')")
-    public List<Pessoa> listar(){
-        return pessoaRepository.findAll();
-    }
-    
+
     @Autowired
     private ApplicationEventPublisher publisher;
 
     @Autowired
-    private PessoaService PessoaService;
+    private PessoaService pessoaService;
+
+
+
+    @GetMapping()
+    @PreAuthorize("hasAuthority('ROLE_PESQUISAR_PESSOA')")
+    public Page<Pessoa> pesquisar(Pageable pageable, PessoaFilter pessoaFilter){
+        return pessoaRepository.filtrar(pessoaFilter, pageable);
+    }
+    
+
     
     
 
@@ -81,14 +87,14 @@ public class PessoaResource {
     @PutMapping("/{codigo}")
     @PreAuthorize("hasAuthority('ROLE_CADASTRAR_PESSOA')")
     public ResponseEntity<Pessoa> atualizar(@PathVariable Long codigo, @Valid @RequestBody Pessoa pessoa) {
-        Pessoa pessoaAtualizada = PessoaService.pessoaAtualizar(codigo, pessoa);
+        Pessoa pessoaAtualizada = pessoaService.pessoaAtualizar(codigo, pessoa);
         return ResponseEntity.ok(pessoaAtualizada);
     }
 
     @PutMapping("/{codigo}/ativo")
     @PreAuthorize("hasAuthority('ROLE_CADASTRAR_PESSOA')")
     public ResponseEntity<Pessoa> atualizarStatus(@PathVariable Long codigo, @RequestBody Boolean ativo) {
-        return ResponseEntity.ok(PessoaService.atualizarPropriedadeAtivo(codigo, ativo));
+        return ResponseEntity.ok(pessoaService.atualizarPropriedadeAtivo(codigo, ativo));
     }
 }
  

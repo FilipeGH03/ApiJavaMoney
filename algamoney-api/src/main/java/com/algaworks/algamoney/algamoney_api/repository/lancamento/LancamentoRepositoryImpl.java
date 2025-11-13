@@ -11,6 +11,7 @@ import org.springframework.data.domain.Pageable;
 import com.algaworks.algamoney.algamoney_api.model.Lancamento;
 import com.algaworks.algamoney.algamoney_api.repository.filter.LancamentoFilter;
 import com.algaworks.algamoney.algamoney_api.repository.projection.ResumoLancamentos;
+import com.algaworks.algamoney.algamoney_api.util.PaginationUtil;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -36,7 +37,7 @@ public class LancamentoRepositoryImpl implements LancamentoRespositoryQuery {
         
         TypedQuery<Lancamento> query = manager.createQuery(criteria);
         
-        adicionarRestricoesDePaginacao(query, pageable);
+        PaginationUtil.adicionarRestricoesDePaginacao(query, pageable);
         return new PageImpl<>(query.getResultList(), pageable, total(lancamentoFilter));
     }
     
@@ -69,7 +70,7 @@ public class LancamentoRepositoryImpl implements LancamentoRespositoryQuery {
         
         TypedQuery<ResumoLancamentos> query = manager.createQuery(criteria);
         
-        adicionarRestricoesDePaginacao(query, pageable);
+        PaginationUtil.adicionarRestricoesDePaginacao(query, pageable);
         return new PageImpl<>(query.getResultList(), pageable, total(lancamentoFilter));
     }
     
@@ -101,15 +102,6 @@ public class LancamentoRepositoryImpl implements LancamentoRespositoryQuery {
             );
         }        
         return predicates.toArray(new Predicate[predicates.size()]);
-    }
-
-    private <T> void adicionarRestricoesDePaginacao(TypedQuery<T> query, Pageable pageable) {
-        int paginaAtual = pageable.getPageNumber();
-        int totalRegistrosPorPagina = pageable.getPageSize();
-        int primeiroRegistroDaPagina = paginaAtual * totalRegistrosPorPagina;
-
-        query.setFirstResult(primeiroRegistroDaPagina);
-        query.setMaxResults(totalRegistrosPorPagina);
     }
 
     private Long total(LancamentoFilter lancamentoFilter) {

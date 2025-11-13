@@ -27,5 +27,27 @@ public class LancamentoService {
         }
         return lancamentoRepository.save(lancamento);
     }
+
+    public Lancamento atualizarLancamento(Long codigo, Lancamento lancamento) {
+        Lancamento lancamentoExistente = getLancamentoExistente(codigo);
+        lancamento.setCodigo(codigo);
+        Lancamento lancamentoAtualizado = lancamentoRepository.save(lancamento);
+        if (!lancamentoExistente.getPessoa().getCodigo().equals(lancamentoAtualizado.getPessoa().getCodigo())) {
+            Pessoa pessoa = pessoaRepository.findById(lancamentoAtualizado.getPessoa().getCodigo()).orElse(null);
+            if (pessoa == null || !pessoa.getAtivo()) {
+                throw new PessoaInexistenteOuInativaException(); 
+            }
+        }
+
+        return lancamentoAtualizado;
+    }
+
+    private Lancamento getLancamentoExistente(Long codigo) {
+        Lancamento lancamentoExistente = lancamentoRepository.findById(codigo).orElse(null);
+        if (lancamentoExistente == null) {
+            throw new org.springframework.dao.EmptyResultDataAccessException(1);
+        }
+        return lancamentoExistente;
+    }
     
 }

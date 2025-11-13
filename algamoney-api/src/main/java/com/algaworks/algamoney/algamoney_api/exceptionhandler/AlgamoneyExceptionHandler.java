@@ -17,6 +17,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.orm.jpa.JpaObjectRetrievalFailureException;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
@@ -64,8 +65,13 @@ public class AlgamoneyExceptionHandler extends ResponseEntityExceptionHandler {
         return handleExceptionInternal(ex, erros, new HttpHeaders(), HttpStatus.BAD_REQUEST, request);
     }
 
-
-
+    @ExceptionHandler({JpaObjectRetrievalFailureException.class})
+    public ResponseEntity<Object> handleJpaObjectRetrievalFailureException(JpaObjectRetrievalFailureException ex, WebRequest request){
+        String mensagemUsuario = messageSource.getMessage("recurso.operacao-nao-permitida", null, LocaleContextHolder.getLocale());
+        String mensagemDesenvolvedor = ExceptionUtils.getRootCauseMessage(ex);
+        List<Erro> erros = Arrays.asList(new Erro(mensagemUsuario, mensagemDesenvolvedor));
+        return handleExceptionInternal(ex, erros, new HttpHeaders(), HttpStatus.BAD_REQUEST, request);
+    }
 
     private List<Erro> criarListaDeErros(BindingResult bindingResult) {
         List<Erro> erros = new ArrayList<>();
